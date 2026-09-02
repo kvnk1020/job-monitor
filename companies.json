@@ -1,0 +1,24 @@
+[
+  {
+    "name": "CoreWeave",
+    "type": "greenhouse",
+    "token": "coreweave"
+  },
+  {
+    "name": "Stoke Space",
+    "type": "greenhouse",
+    "token": "stokespacetechnologies"
+  },
+  {
+    "name": "Boeing",
+    "type": "workday",
+    "tenant": "boeing",
+    "dc": "wd1",
+    "site": "EXTERNAL_CAREERS"
+  },
+  {
+    "name": "PACCAR",
+    "type": "custom_diff",
+    "url": "https://jobs.paccar.com/viewalljobs/"
+  }
+]
