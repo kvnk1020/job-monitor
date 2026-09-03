@@ -27,8 +27,7 @@ COMPANIES_FILE = HERE / "companies.json"
 STATE_FILE = HERE / "state.json"
 
 # --- Configure these two ---
-PLACEHOLDER_NTFY_TOPIC = "changeme-to-a-private-topic-name"
-NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "changeme-to-a-private-topic-name")
 DESIGN_KEYWORDS = [
     "designer",
     "design",
@@ -38,15 +37,6 @@ DESIGN_KEYWORDS = [
     "user interface",
     "product design",
 ]
-
-
-def validate_ntfy_topic(topic: str) -> str:
-    if not topic or topic == PLACEHOLDER_NTFY_TOPIC:
-        raise ValueError(
-            "NTFY_TOPIC is not configured. Set the environment variable to a private ntfy topic "
-            "before running job_monitor.py."
-        )
-    return topic
 
 
 def matches_design_role(title: str) -> bool:
@@ -68,6 +58,23 @@ def fetch_greenhouse(company: dict) -> list[dict]:
             "location": (job.get("location") or {}).get("name", ""),
         }
         for job in jobs
+    ]
+
+
+def fetch_lever(company: dict) -> list[dict]:
+    """Lever public postings API. No auth needed."""
+    url = f"https://api.lever.co/v0/postings/{company['token']}?mode=json"
+    resp = requests.get(url, timeout=20)
+    resp.raise_for_status()
+    postings = resp.json()
+    return [
+        {
+            "id": job["id"],
+            "title": job["text"],
+            "url": job.get("hostedUrl", ""),
+            "location": (job.get("categories") or {}).get("location", ""),
+        }
+        for job in postings
     ]
 
 
@@ -135,35 +142,20 @@ def fetch_custom_diff(company: dict) -> list[dict]:
 
 FETCHERS = {
     "greenhouse": fetch_greenhouse,
+    "lever": fetch_lever,
     "workday": fetch_workday,
     "custom_diff": fetch_custom_diff,
 }
 
 
 def load_state() -> dict:
-    state_path = Path(STATE_FILE)
-    if not state_path.exists():
-        return {}
-
-    raw = state_path.read_text(encoding="utf-8").strip()
-    if not raw:
-        return {}
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        print(f"[warn] {state_path} is invalid JSON; resetting state")
-        return {}
-
-    if not isinstance(data, dict):
-        print(f"[warn] {state_path} did not contain an object; resetting state")
-        return {}
-
-    return data
+    if STATE_FILE.exists():
+        return json.loads(STATE_FILE.read_text())
+    return {}
 
 
 def save_state(state: dict) -> None:
-    Path(STATE_FILE).write_text(json.dumps(state, indent=2), encoding="utf-8")
+    STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
 def send_notification(title: str, message: str, url: str = "") -> None:
@@ -179,12 +171,9 @@ def send_notification(title: str, message: str, url: str = "") -> None:
 
 
 def main():
-    validate_ntfy_topic(NTFY_TOPIC)
-    companies_path = Path(COMPANIES_FILE)
-    state_path = Path(STATE_FILE)
-    companies = json.loads(companies_path.read_text(encoding="utf-8"))
+    companies = json.loads(COMPANIES_FILE.read_text())
     state = load_state()
-    is_first_run = not state_path.exists()
+    is_first_run = not STATE_FILE.exists()
 
     for company in companies:
         name = company["name"]
