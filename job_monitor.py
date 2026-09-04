@@ -41,6 +41,27 @@ TARGET_TITLE_PATTERN = re.compile(
     r"\b(?:" + "|".join(re.escape(title) for title in TARGET_TITLES) + r")\b",
     re.IGNORECASE,
 )
+US_LOCATION_INDICATORS = [
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+    "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi",
+    "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey",
+    "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma",
+    "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+    "Wisconsin", "Wyoming", "District of Columbia", "AL", "AK", "AZ", "AR", "CA",
+    "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY",
+    "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
+    "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD",
+    "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+]
+US_LOCATION_PATTERN = re.compile(
+    r"(?<!\w)(?:United States|USA|U\.S\.|US|" + "|".join(
+        re.escape(indicator) for indicator in US_LOCATION_INDICATORS
+    ) + r")(?!\w)",
+    re.IGNORECASE,
+)
 
 
 def validate_ntfy_topic(topic: str) -> str:
@@ -54,6 +75,10 @@ def validate_ntfy_topic(topic: str) -> str:
 
 def matches_design_role(title: str) -> bool:
     return TARGET_TITLE_PATTERN.search(title) is not None
+
+
+def matches_us_location(location: str) -> bool:
+    return US_LOCATION_PATTERN.search(location) is not None
 
 
 def fetch_greenhouse(company: dict) -> list[dict]:
@@ -229,8 +254,9 @@ def main():
             current_ids.add(job["id"])
             is_new = job["id"] not in seen_ids
             is_design = matches_design_role(job["title"])
+            is_us_based = matches_us_location(job["location"])
 
-            if is_new and is_design and not is_first_run:
+            if is_new and is_design and is_us_based and not is_first_run:
                 print(f"[new match] {name}: {job['title']}")
                 send_notification(
                     title=f"New design role at {name}",

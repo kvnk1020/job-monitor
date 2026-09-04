@@ -7,6 +7,32 @@ import job_monitor
 
 
 class JobMonitorTests(unittest.TestCase):
+    def test_matches_us_locations_only_with_explicit_indicator(self):
+        matching_locations = [
+            "United States",
+            "USA",
+            "U.S.",
+            "Austin, TX",
+            "Seattle, Washington",
+            "Remote - US",
+            "Remote, United States",
+            "Washington, DC",
+        ]
+        non_matching_locations = [
+            "Remote",
+            "London, UK",
+            "Quincy, WAKE",
+            "Paris, France",
+        ]
+
+        for location in matching_locations:
+            with self.subTest(location=location):
+                self.assertTrue(job_monitor.matches_us_location(location))
+
+        for location in non_matching_locations:
+            with self.subTest(location=location):
+                self.assertFalse(job_monitor.matches_us_location(location))
+
     def test_matches_only_exact_target_title_phrases(self):
         matching_titles = [
             "UX Designer",
