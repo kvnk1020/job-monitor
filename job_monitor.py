@@ -19,6 +19,7 @@ import json
 import os
 import hashlib
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -26,6 +27,9 @@ import requests
 HERE = Path(__file__).parent
 COMPANIES_FILE = HERE / "companies.json"
 STATE_FILE = HERE / "state.json"
+FETCH_RETRIES = 2
+FETCH_RETRY_DELAY = 2
+DEBUG_MATCHING = os.environ.get("DEBUG_MATCHING", "").lower() in {"1", "true", "yes"}
 
 # --- Configure these two ---
 PLACEHOLDER_NTFY_TOPIC = "changeme-to-a-private-topic-name"
@@ -81,11 +85,25 @@ def matches_us_location(location: str) -> bool:
     return US_LOCATION_PATTERN.search(location) is not None
 
 
+def request_with_retries(method: str, url: str, **kwargs) -> requests.Response:
+    attempts = FETCH_RETRIES + 1
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            if attempt == attempts:
+                print(f"[error] fetch failed after {attempts} attempts: {exc}")
+                raise
+            print(f"[retry] fetch attempt {attempt}/{attempts} failed: {exc}")
+            time.sleep(FETCH_RETRY_DELAY)
+
+
 def fetch_greenhouse(company: dict) -> list[dict]:
     """Greenhouse public Job Board API. No auth needed."""
     url = f"https://boards-api.greenhouse.io/v1/boards/{company['token']}/jobs"
-    resp = requests.get(url, timeout=20)
-    resp.raise_for_status()
+    resp = request_with_retries("GET", url, timeout=20)
     jobs = resp.json().get("jobs", [])
     return [
         {
@@ -101,8 +119,7 @@ def fetch_greenhouse(company: dict) -> list[dict]:
 def fetch_lever(company: dict) -> list[dict]:
     """Lever public postings API. No auth needed."""
     url = f"https://api.lever.co/v0/postings/{company['token']}?mode=json"
-    resp = requests.get(url, timeout=20)
-    resp.raise_for_status()
+    resp = request_with_retries("GET", url, timeout=20)
     postings = resp.json()
     return [
         {
@@ -133,8 +150,7 @@ def fetch_workday(company: dict) -> list[dict]:
 
     for _ in range(max_pages):
         payload = {"appliedFacets": {}, "limit": limit, "offset": offset, "searchText": ""}
-        resp = requests.post(base, json=payload, timeout=20)
-        resp.raise_for_status()
+        resp = request_with_retries("POST", base, json=payload, timeout=20)
         data = resp.json()
         postings = data.get("jobPostings", [])
         if not postings:
@@ -164,8 +180,9 @@ def fetch_custom_diff(company: dict) -> list[dict]:
     When the hash changes, we notify 'something changed, go check' rather
     than naming a specific new role.
     """
-    resp = requests.get(company["url"], timeout=20, headers={"User-Agent": "Mozilla/5.0"})
-    resp.raise_for_status()
+    resp = request_with_retries(
+        "GET", company["url"], timeout=20, headers={"User-Agent": "Mozilla/5.0"}
+    )
     content_hash = hashlib.sha256(resp.text.encode("utf-8")).hexdigest()
     return [
         {
@@ -244,7 +261,7 @@ def main():
         try:
             jobs = fetcher(company)
         except Exception as e:
-            print(f"[error] {name}: {e}")
+            print(f"[error] {name}: fetch failed after {FETCH_RETRIES + 1} attempts: {e}")
             continue
 
         seen_ids = set(state.get(name, []))
@@ -255,6 +272,14 @@ def main():
             is_new = job["id"] not in seen_ids
             is_design = matches_design_role(job["title"])
             is_us_based = matches_us_location(job["location"])
+
+            if DEBUG_MATCHING and is_design:
+                print(f"[debug title match] {name}: {job['title']} ({job['location']})")
+                if not is_us_based:
+                    print(
+                        f"[debug location rejected] {name}: {job['title']} "
+                        f"({job['location'] or 'unknown location'})"
+                    )
 
             if is_new and is_design and is_us_based and not is_first_run:
                 print(f"[new match] {name}: {job['title']}")

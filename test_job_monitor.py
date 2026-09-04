@@ -1,12 +1,42 @@
 import json
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import job_monitor
 
 
 class JobMonitorTests(unittest.TestCase):
+    def test_request_retries_after_timeout(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+
+        with patch.object(
+            job_monitor.requests,
+            "request",
+            side_effect=[job_monitor.requests.Timeout("timed out"), response],
+        ) as request, patch.object(job_monitor.time, "sleep") as sleep:
+            result = job_monitor.request_with_retries(
+                "GET", "https://example.com", timeout=20
+            )
+
+        self.assertIs(result, response)
+        self.assertEqual(request.call_count, 2)
+        sleep.assert_called_once_with(job_monitor.FETCH_RETRY_DELAY)
+
+    @patch.object(job_monitor.time, "sleep")
+    @patch.object(
+        job_monitor.requests,
+        "request",
+        side_effect=job_monitor.requests.Timeout("timed out"),
+    )
+    def test_request_raises_after_retries(self, request, sleep):
+        with self.assertRaises(job_monitor.requests.Timeout):
+            job_monitor.request_with_retries("GET", "https://example.com", timeout=20)
+
+        self.assertEqual(request.call_count, job_monitor.FETCH_RETRIES + 1)
+        self.assertEqual(sleep.call_count, job_monitor.FETCH_RETRIES)
+
     def test_matches_us_locations_only_with_explicit_indicator(self):
         matching_locations = [
             "United States",
