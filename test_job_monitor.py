@@ -41,6 +41,13 @@ class JobMonitorTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "NTFY_TOPIC"):
                     job_monitor.main()
 
+    @patch.object(job_monitor.requests, "post", side_effect=job_monitor.requests.Timeout("timed out"))
+    def test_notification_timeout_does_not_raise(self, post):
+        with patch.object(job_monitor, "NTFY_TOPIC", "test-topic"):
+            job_monitor.send_notification("Test title", "Test message")
+
+        post.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

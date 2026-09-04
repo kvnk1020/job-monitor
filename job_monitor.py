@@ -188,12 +188,15 @@ def send_notification(title: str, message: str, url: str = "") -> None:
     headers = {"Title": title}
     if url:
         headers["Click"] = url
-    requests.post(
-        f"https://ntfy.sh/{NTFY_TOPIC}",
-        data=message.encode("utf-8"),
-        headers=headers,
-        timeout=10,
-    )
+    try:
+        requests.post(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=message.encode("utf-8"),
+            headers=headers,
+            timeout=10,
+        ).raise_for_status()
+    except requests.RequestException as exc:
+        print(f"[warn] notification failed: {exc}")
 
 
 def main():
