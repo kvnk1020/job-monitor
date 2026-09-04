@@ -20,5 +20,76 @@
     "name": "PACCAR",
     "type": "custom_diff",
     "url": "https://jobs.paccar.com/viewalljobs/"
+  },
+  {
+    "name": "Axon",
+    "type": "greenhouse",
+    "token": "axon"
+  },
+  {
+    "name": "Anduril",
+    "type": "greenhouse",
+    "token": "andurilindustries"
+  },
+  {
+    "name": "Smartsheet",
+    "type": "greenhouse",
+    "token": "smartsheet"
+  },
+  {
+    "name": "Outreach",
+    "type": "lever",
+    "token": "outreach"
+  },
+  {
+    "name": "F5",
+    "type": "workday",
+    "tenant": "ffive",
+    "dc": "wd5",
+    "site": "f5jobs"
+  },
+  {
+    "name": "Blue Origin",
+    "type": "workday",
+    "tenant": "blueorigin",
+    "dc": "wd5",
+    "site": "BlueOrigin"
+  },
+  {
+    "name": "Expedia Group",
+    "type": "workday",
+    "tenant": "expedia",
+    "dc": "wd108",
+    "site": "search"
+  },
+  {
+    "name": "Microsoft",
+    "type": "custom_diff",
+    "url": "https://careers.microsoft.com/v2/global/en/home.html"
+  },
+  {
+    "name": "Amazon",
+    "type": "custom_diff",
+    "url": "https://www.amazon.jobs/en/search?base_query=product+designer"
+  },
+  {
+    "name": "T-Mobile",
+    "type": "custom_diff",
+    "url": "https://careers.t-mobile.com/corporate-jobs"
+  },
+  {
+    "name": "Seismic",
+    "type": "custom_diff",
+    "url": "https://www.seismic.com/careers/job-listings/"
+  },
+  {
+    "name": "Docusign",
+    "type": "custom_diff",
+    "url": "https://careers.docusign.com/careers-home"
+  },
+  {
+    "name": "Costco",
+    "type": "custom_diff",
+    "url": "https://careers-costco.icims.com/"
   }
 ]
