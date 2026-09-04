@@ -18,6 +18,7 @@ second run onward, only new postings trigger a notification.
 import json
 import os
 import hashlib
+import re
 from pathlib import Path
 
 import requests
@@ -29,15 +30,17 @@ STATE_FILE = HERE / "state.json"
 # --- Configure these two ---
 PLACEHOLDER_NTFY_TOPIC = "changeme-to-a-private-topic-name"
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
-DESIGN_KEYWORDS = [
-    "designer",
-    "design",
-    "ux",
-    "ui",
-    "user experience",
-    "user interface",
-    "product design",
+TARGET_TITLES = [
+    "UX Designer",
+    "Product Designer",
+    "UI/UX Designer",
+    "User Experience Designer",
+    "Interaction Designer",
 ]
+TARGET_TITLE_PATTERN = re.compile(
+    r"\b(?:" + "|".join(re.escape(title) for title in TARGET_TITLES) + r")\b",
+    re.IGNORECASE,
+)
 
 
 def validate_ntfy_topic(topic: str) -> str:
@@ -50,8 +53,7 @@ def validate_ntfy_topic(topic: str) -> str:
 
 
 def matches_design_role(title: str) -> bool:
-    title_lower = title.lower()
-    return any(kw in title_lower for kw in DESIGN_KEYWORDS)
+    return TARGET_TITLE_PATTERN.search(title) is not None
 
 
 def fetch_greenhouse(company: dict) -> list[dict]:

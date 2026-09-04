@@ -7,6 +7,31 @@ import job_monitor
 
 
 class JobMonitorTests(unittest.TestCase):
+    def test_matches_only_exact_target_title_phrases(self):
+        matching_titles = [
+            "UX Designer",
+            "Senior Product Designer",
+            "Product Designer II",
+            "Product Designer, Growth",
+            "UI/UX Designer",
+            "User Experience Designer",
+            "Interaction Designer",
+        ]
+        non_matching_titles = [
+            "Data Center Technician - Quincy, WA",
+            "Product Design Manager",
+            "Product Designers",
+            "Senior UX Design Manager",
+        ]
+
+        for title in matching_titles:
+            with self.subTest(title=title):
+                self.assertTrue(job_monitor.matches_design_role(title))
+
+        for title in non_matching_titles:
+            with self.subTest(title=title):
+                self.assertFalse(job_monitor.matches_design_role(title))
+
     def test_load_state_handles_missing_and_empty_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             state_path = f"{temp_dir}/state.json"
